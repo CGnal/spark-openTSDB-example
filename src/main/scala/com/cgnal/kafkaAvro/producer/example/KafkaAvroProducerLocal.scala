@@ -18,8 +18,8 @@ package com.cgnal.DataPointProducer.kafka.examples
 
 import java.util.Properties
 
-import com.cgnal.DataPointProducer.kafka.KafkaAvroProducer
 import com.typesafe.config.ConfigFactory
+import org.apache.kafka.clients.producer.ProducerConfig
 
 /**
   * Created by cgnal on 08/09/16.
@@ -31,9 +31,10 @@ object KafkaAvroProducerLocal extends App{
   val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
   val props = new Properties()
 
-  props.put("bootstrap.servers", brokers)
-  props.put("key.serializer", serializer)
-  props.put("value.serializer", serializer)
+  //brokers are sequences of ip:port (e.g., "localhost:9092, 193.204.187.22:9092")
+  props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers)
+  props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, serializer)
+  props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, serializer)
 
   new KafkaAvroProducer().run(3, 100, 30000L, props, topic)
 }

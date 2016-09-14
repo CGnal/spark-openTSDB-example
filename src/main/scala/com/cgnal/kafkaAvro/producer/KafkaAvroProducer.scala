@@ -66,6 +66,7 @@ class KafkaAvroProducer {
       producer.close()
       val time = (System.currentTimeMillis() - startTime) / 1000
       println(s"Kafka Producer closed in $time sec")
+
     }
   }
 
