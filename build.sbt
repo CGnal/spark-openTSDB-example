@@ -15,9 +15,9 @@ ivyScala := ivyScala.value map {
   _.copy(overrideScalaVersion = true)
 }
 
-scalariformSettings
+//scalariformSettings
 
-scalastyleFailOnError := true
+//scalastyleFailOnError := true
 
 dependencyUpdatesExclusions := moduleFilter(organization = "org.scala-lang")
 
@@ -34,41 +34,39 @@ scalacOptions ++= Seq(
   "-Xfuture"
 )
 
-
-wartremoverErrors ++= Seq(
-  Wart.Any,
-  Wart.Any2StringAdd,
-  Wart.AsInstanceOf,
-  //Wart.DefaultArguments,
-  Wart.EitherProjectionPartial,
-  Wart.Enumeration,
-  //Wart.Equals,
-  Wart.ExplicitImplicitTypes,
-  Wart.FinalCaseClass,
-  Wart.FinalVal,
-  Wart.ImplicitConversion,
-  Wart.IsInstanceOf,
-  Wart.JavaConversions,
-  Wart.LeakingSealed,
-  Wart.ListOps,
-  Wart.MutableDataStructures,
-  //Wart.NoNeedForMonad,
-  //Wart.NonUnitStatements,
-  Wart.Nothing,
-  Wart.Null,
-  Wart.Option2Iterable,
-  Wart.OptionPartial,
-  //Wart.Overloading,
-  Wart.Product,
-  Wart.Return,
-  Wart.Serializable,
-  //Wart.Throw,
-  Wart.ToString,
-  Wart.TryPartial,
-  Wart.Var,
-  Wart.While
-)
-
+//wartremoverErrors ++= Seq(
+//  Wart.Any,
+//  Wart.Any2StringAdd,
+//  Wart.AsInstanceOf,
+//  //Wart.DefaultArguments,
+//  Wart.EitherProjectionPartial,
+//  Wart.Enumeration,
+//  //Wart.Equals,
+//  Wart.ExplicitImplicitTypes,
+//  Wart.FinalCaseClass,
+//  Wart.FinalVal,
+//  Wart.ImplicitConversion,
+//  Wart.IsInstanceOf,
+//  Wart.JavaConversions,
+//  Wart.LeakingSealed,
+//  Wart.ListOps,
+//  Wart.MutableDataStructures,
+//  //Wart.NoNeedForMonad,
+//  //Wart.NonUnitStatements,
+//  Wart.Nothing,
+//  Wart.Null,
+//  Wart.Option2Iterable,
+//  Wart.OptionPartial,
+//  //Wart.Overloading,
+//  Wart.Product,
+//  Wart.Return,
+//  Wart.Serializable,
+//  //Wart.Throw,
+//  Wart.ToString,
+//  Wart.TryPartial,
+//  Wart.Var,
+//  Wart.While
+//)
 
 val sparkVersion = "1.6.0-cdh5.7.1"
 
@@ -102,11 +100,12 @@ val sparkExcludes =
 
 val assemblyDependencies = (scope: String) => Seq(
   sparkExcludes("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion % scope),
+  "org.apache.spark" %% "spark-core" %sparkVersion % scope,
   "com.typesafe" % "config" % "1.3.0",
   "com.gensler" %% "scalavro" % "0.6.2",
   "org.apache.avro" % "avro" % "1.8.1",
   "com.cgnal.spark" %% "spark-opentsdb" % "1.0" % scope,
-  "org.apache.kafka" %% "kafka" % "0.10.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact)
+  "org.apache.kafka" %% "kafka" % "0.9.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact)
 
 
 )
@@ -120,7 +119,7 @@ val hadoopClientExcludes =
   otherwise we set up the scope to "provided" because those dependencies will be assembled in the "assembly"*/
 lazy val assemblyDependenciesScope: String = if (isALibrary) "compile" else "provided"
 
-lazy val hadoopDependenciesScope = if (isALibrary) "provided" else "compile"
+lazy val hadoopDependenciesScope = "compile" //if (isALibrary) "provided" else "compile"
 
 libraryDependencies ++= Seq(
   sparkExcludes("com.databricks" %% "spark-avro" % sparkAvroVersion % hadoopDependenciesScope),

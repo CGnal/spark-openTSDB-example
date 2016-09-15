@@ -14,28 +14,41 @@
  * limitations under the License.
  */
 
-package com.cgnal.DataPointConsumer.sparkStreaming.examples
+package com.cgnal.kafkaAvro.consumers.example
 
-import com.cgnal.DataPointConsumer.sparkStreaming.SparkStreamingAvroConsumer
+import java.io.File
+import java.util.Properties
+
+import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
 import com.typesafe.config.ConfigFactory
+import kafka.admin.AdminUtils
 import org.apache.spark.SparkConf
-import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.streaming.{ Seconds, StreamingContext }
 
 /**
-  * Created by cgnal on 09/09/16.
-  */
+ * Created by cgnal on 09/09/16.
+ */
 object SparkStreamingAvroConsumerMain extends App {
-  val sparkConf = new SparkConf().setAppName("kafkaStreaming-consumer").setMaster("local[*]")
-  val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(5))
+
+  val dataDirectory = System.getProperty("java.io.tmpdir")
+  val dir = new File(dataDirectory, "hadoop")
+  dir.deleteOnExit()
+
+  System.setProperty("hadoop.home.dir", "/")
+  val sparkConf = new SparkConf()
+    .setAppName("kafkaStreaming-consumer-test")
+    .setMaster("local[*]")
+  //.setSparkHome("dir.getAbsolutePath")
+  implicit val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(5))
 
   val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
   val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.docker.brokers")
   val props = Map("metadata.broker.list" -> brokers)
 
-  new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
+  val pippo = new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
 
+  //pippo.print(100)
   ssc.start()
   ssc.awaitTermination()
-
 
 }

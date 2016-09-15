@@ -32,23 +32,37 @@
 
 package com.cgnal.DataPointConsumer.sparkStreaming
 
+import java.io.File
+import java.nio.file.Files
 import java.util.Properties
+import java.util.logging.LogManager
 
+import com.cgnal.DataPoint
 import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
-import com.cgnal.kafkaAvro.producer.KafkaAvroProducer
+import com.cgnal.kafkaAvro.producers.KafkaAvroProducer
 import com.cgnal.kafkaLocal.KafkaLocal
+import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.spark.streaming.{Milliseconds, StreamingContext}
-import org.apache.spark.{SparkConf, SparkContext}
-import org.scalatest.{BeforeAndAfterAll, MustMatchers, WordSpec}
+import org.apache.log4j.{ Level, Logger }
+import org.apache.spark.streaming.dstream.DStream
+
+import scala.collection.JavaConversions._
+import org.apache.spark.streaming.{ Milliseconds, Seconds, StreamingContext, Time }
+import org.apache.spark.{ SparkConf, SparkContext }
+import org.scalatest._
+import org.apache.spark.util.ManualClock
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 /**
-  * Created by cgnal on 09/09/16.
-  */
-class SparkStreamingAvroConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfterAll{
+ * Created by cgnal on 09/09/16.
+ */
+class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
+
   var sparkContext: SparkContext = _
-  var streamingContext: StreamingContext = _
+  implicit var streamingContext: StreamingContext = _
   val producer = new KafkaAvroProducer()
   val consumer = new SparkStreamingAvroConsumer()
 
@@ -58,57 +72,82 @@ class SparkStreamingAvroConsumerSpec extends WordSpec with MustMatchers with Bef
   propsProducer.put("key.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
   propsProducer.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
 
-
   val propsConsumer = Map(
     "value.deserializer" -> "org.apache.kafka.common.serialization.ByteArrayDeserializer",
     "key.deserializer" -> "org.apache.kafka.common.serialization.ByteArrayDeserializer",
-    "bootstrap.servers" -> "localhost:9092")
+    "bootstrap.servers" -> "localhost:9092",
+    "metadata.broker.list" -> "localhost:9092"
+  )
 
   override def beforeAll(): Unit = {
-    KafkaLocal.start()
+
+    val dataDirectory = System.getProperty("java.io.tmpdir")
+    val dir = new File(dataDirectory, "hadoop")
+    dir.deleteOnExit()
+    System.setProperty("hadoop.home.dir", dir.getAbsolutePath)
+    // KafkaLocal.start()
+    //KafkaLocal.createTopic(topic)
     val conf = new SparkConf().
       setAppName("spark-opentsdb-example-test").
       setMaster("local[*]")
+
+    val rootLogger = Logger.getRootLogger()
+    rootLogger.setLevel(Level.ERROR)
+
     sparkContext = new SparkContext(conf)
-    streamingContext = new StreamingContext(sparkContext, Milliseconds(20))
+    streamingContext = new StreamingContext(sparkContext, Milliseconds(500))
   }
 
-  "KafkaAvroProducer" must {
+  "KafkaAvroSpec" must {
     "produce 200 data-points on topic test-spec" in {
-
 
       producer.run(2, 100, 0L, propsProducer, topic)
 
-      //true must be equals true
+      val propsTestConsumer = new Properties()
+      propsTestConsumer.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
+      propsTestConsumer.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
+      propsTestConsumer.put("bootstrap.servers", "localhost:9092")
+      propsTestConsumer.put("group.id", "consumer-test")
+      propsTestConsumer.put("zookeeper.connect", "localhost:2181")
+      propsTestConsumer.put("zookeeper.session.timeout.ms", "400")
+      propsTestConsumer.put("zookeeper.sync.time.ms", "200")
+      propsTestConsumer.put("auto.commit.interval.ms", "1000")
+
+      val testConsumer: KafkaConsumer[Array[Byte], Array[Byte]] = new KafkaConsumer[Array[Byte], Array[Byte]](propsTestConsumer)
+      val topics = testConsumer.listTopics()
+      val data = testConsumer.poll(100)
+      data.iterator().toList.size must be equals 200
+      topics.containsKey(topic) must be equals true
+      testConsumer.close()
     }
 
-    "SparkStreamingAvroConsumer" must {
-      "consume 200 data-point on topic test-spec" in {
+    "consume 200 data-point on topic test-spec" in {
 
-        //val consumer : KafkaConsumer[Array[Byte], Array[Byte]]= new KafkaConsumer[Array[Byte], Array[Byte]](propsConsumer)
-        //val topics = consumer.listTopics()
-        //consumer.close()
-        //topics.containsKey(topic) must be equals true
+      var resultsRDD = scala.collection.mutable.ArrayBuffer.empty[Array[DataPoint]]
+      val thread = new Thread(new Runnable {
+        override def run(): Unit = producer.run(2, 100, 500, propsProducer, topic)
+      })
+      thread.start()
 
-        consumer.run(streamingContext, Set(topic), propsConsumer)
-
-
+      val stream: DStream[DataPoint] = consumer.run(streamingContext, Set(topic), propsConsumer)
+      stream.foreachRDD { rdd =>
+        resultsRDD += rdd.collect()
+        ()
       }
+      streamingContext.start()
+      Thread.sleep(2000)
+      streamingContext.stop(false, false)
+
+      val resultArrayFromRDD = resultsRDD.flatten.toList
+
+      resultArrayFromRDD.size must be equals 200
+
     }
-
-
-
   }
-
-
-
 
   override def afterAll(): Unit = {
     KafkaLocal.stop()
-    streamingContext.stop(false)
-    streamingContext.awaitTerminationOrTimeout(1000L)
     sparkContext.stop()
   }
 }
-
 
