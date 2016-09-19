@@ -47,8 +47,7 @@ object SparkStreamingAvroConsumerMain extends App {
 
   val pippo = new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
 
-  //pippo.print(100)
-  ssc.start()
-  ssc.awaitTermination()
+  pippo.print(100)
+
 
 }
