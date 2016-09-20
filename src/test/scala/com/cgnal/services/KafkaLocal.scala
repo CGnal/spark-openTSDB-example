@@ -121,7 +121,7 @@ object KafkaLocal {
   }
 
   def start(): Unit = {
-    startZK()
+    //startZK()
     Thread.sleep(5000)
     startKafka()
   }
