@@ -49,5 +49,7 @@ object SparkStreamingAvroConsumerMain extends App {
 
   pippo.print(100)
 
+  ssc.start()
+  ssc.awaitTermination()
 
 }

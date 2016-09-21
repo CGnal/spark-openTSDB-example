@@ -7,13 +7,15 @@ import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.hbase.client.{ClusterConnection, ConnectionFactory, HBaseAdmin}
 import org.apache.hadoop.hbase.{HBaseTestingUtility, _}
 import org.apache.hadoop.hbase.spark.HBaseContext
+import org.apache.log4j.{Level, Logger}
 
 /**
   * Created by cgnal on 19/09/16.
   */
 class HbaseLocal {
   //var hBaseServer: Option[HBaseTestingUtility] = None
-  val LOG = LogFactory.getLog(this.getClass)
+  val rootLogger = Logger.getRootLogger()
+  rootLogger.setLevel(Level.ERROR)
   var  miniCluster: Option[HBaseTestingUtility] = None
   var hBaseAdmin: Option[HBaseAdmin] = None
 
@@ -33,9 +35,12 @@ class HbaseLocal {
 
       try
         miniCluster = Some(new HBaseTestingUtility())
-        miniCluster.get.getConfiguration().set("test.hbase.zookeeper.property.clientPort", "2181");
+        miniCluster.get.getConfiguration().set("test.hbase.zookeeper.property.clientPort", "2181")
+        miniCluster.get.getConfiguration().set("zookeeper.connection.timeout.ms", "10000")
+        miniCluster.get.getConfiguration().set("zookeeper.session.timeout.ms", "10000")
+
         miniCluster.get.startMiniCluster()
-        def configuration = miniCluster.get.getConfiguration
+        val configuration = miniCluster.get.getConfiguration
 
         //hBaseAdmin = Some(new HBaseAdmin(configuration))
         val conn = ConnectionFactory.createConnection(configuration)

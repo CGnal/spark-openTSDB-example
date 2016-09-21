@@ -23,7 +23,7 @@ import com.gensler.scalavro.io.AvroTypeIO
 import com.gensler.scalavro.types.AvroType
 import kafka.serializer.DefaultDecoder
 import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.{ DStream, InputDStream }
+import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka.KafkaUtils
 
 import scala.util.Success

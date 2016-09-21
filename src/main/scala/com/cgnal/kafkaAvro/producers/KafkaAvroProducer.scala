@@ -16,12 +16,14 @@
 
 package com.cgnal.kafkaAvro.producers
 
+import java.sql.Timestamp
 import java.util.Properties
 
 import com.cgnal.DataPoint
 import com.gensler.scalavro.types.AvroType
+import com.typesafe.config.ConfigFactory
 import org.apache.commons.io.output.ByteArrayOutputStream
-import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerRecord }
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 /**
  * Created by cgnal on 08/09/16.
@@ -44,7 +46,9 @@ class KafkaAvroProducer {
       while (true) {
 
         for (i <- 0 to messages) {
-          val data = DataPoint("metric", System.currentTimeMillis(), Map("tag" -> i.toString))
+          val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
+          val epoch = ts.getTime
+          val data = DataPoint("metric", epoch, System.currentTimeMillis(), Map("tag" -> i.toString))
 
           schema.io.write(data, buf)
           val key = s"${data.timestamp}-${data.tags.getOrElse("tag", "-1")}"
@@ -77,11 +81,15 @@ class KafkaAvroProducer {
     val buf = new ByteArrayOutputStream()
     val schema = AvroType[DataPoint]
     val startTime = System.currentTimeMillis
+
+    val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric")
     try {
       for (loop <- 0 until loops) {
 
         for (i <- 0 to messages) {
-          val data = DataPoint("metric", System.currentTimeMillis(), Map("tag" -> i.toString))
+          val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
+          val epoch = ts.getTime
+          val data = DataPoint(metric, epoch, i.toDouble, Map("tag" -> "hello"))
 
           schema.io.write(data, buf)
           val key = s"${data.timestamp}-${data.tags.getOrElse("tag", "-1")}"

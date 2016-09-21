@@ -16,4 +16,4 @@
 
 package com.cgnal
 
-final case class DataPoint(measure: String, timestamp: Long, tags: Map[String, String])
+final case class DataPoint(metric: String, timestamp: Long, value: Double, tags: Map[String, String])

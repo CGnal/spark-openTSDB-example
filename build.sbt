@@ -66,23 +66,20 @@ def commonSettings(moduleName: String) = Seq(
   */
 val hadoopHBaseExcludes =
 (moduleId: ModuleID) => moduleId.
-  excludeAll(ExclusionRule(organization = "org.mortbay.jetty")).
+  //excludeAll(ExclusionRule(organization = "org.mortbay.jetty")).
   excludeAll(ExclusionRule(organization = "javax.servlet"))
 
 
 
 val commonDependencies = Seq(
 
-  "org.apache.commons" % "commons-lang3" % commonsLangVersion,
-  "commons-beanutils" % "commons-beanutils" % commonBeanutilsVersion,
-  /*"com.google.guava" % "guava" % guavaVersion force(),
-  "org.codehaus.jackson" % "jackson-mapper-asl" % jacksonMapperVersion force(),
-  "javax.xml.stream" % "stax-api" % staxApi,
-  "io.dropwizard.metrics" % "metrics-core" % metricsCoreVersion,*/
-  "com.gensler" %% "scalavro" % "0.6.2",
-
-  hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion),
-  "com.cgnal.spark" %% "spark-opentsdb" % "1.0" ,
+  "org.apache.commons" % "commons-lang3" % commonsLangVersion exclude("org.slf4j", "slf4j-log4j12"),
+  "commons-beanutils" % "commons-beanutils" % commonBeanutilsVersion exclude("org.slf4j", "slf4j-log4j12"),
+  "com.gensler" %% "scalavro" % "0.6.2" exclude("org.slf4j", "slf4j-log4j12"),
+  "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
+  "org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
+  //hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion),
+  "com.cgnal.spark" %% "spark-opentsdb" % "1.0" exclude("org.slf4j", "slf4j-log4j12"),
   //"org.apache.kafka" %% "kafka" % "0.9.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
 
 
@@ -120,7 +117,7 @@ def providedOrCompileDependencies(scope: String = "provided") = Seq(
   hadoopHBaseExcludes("org.apache.spark" %% "spark-sql" % sparkVersion),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-mllib" % sparkVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-yarn" % sparkVersion % scope),
-  hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming" % sparkVersion),
+  //hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming" % sparkVersion),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-common" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-client" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-server" % hbaseVersion % scope),

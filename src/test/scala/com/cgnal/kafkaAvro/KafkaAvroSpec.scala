@@ -33,28 +33,20 @@
 package com.cgnal.DataPointConsumer.sparkStreaming
 
 import java.io.File
-import java.nio.file.Files
 import java.util.Properties
-import java.util.logging.LogManager
 
 import com.cgnal.DataPoint
 import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
 import com.cgnal.kafkaAvro.producers.KafkaAvroProducer
-import com.cgnal.kafkaLocal.KafkaLocal
-import com.typesafe.config.ConfigFactory
+import com.cgnal.services.{HbaseLocal, KafkaLocal}
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.log4j.{ Level, Logger }
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.streaming.dstream.DStream
+import org.apache.spark.streaming.{Milliseconds, StreamingContext}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.scalatest._
 
 import scala.collection.JavaConversions._
-import org.apache.spark.streaming.{ Milliseconds, Seconds, StreamingContext, Time }
-import org.apache.spark.{ SparkConf, SparkContext }
-import org.scalatest._
-import org.apache.spark.util.ManualClock
-
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 /**
  * Created by cgnal on 09/09/16.
@@ -65,6 +57,9 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
   implicit var streamingContext: StreamingContext = _
   val producer = new KafkaAvroProducer()
   val consumer = new SparkStreamingAvroConsumer()
+  var hbase: HbaseLocal = _
+  var kfServer: KafkaLocal = _
+
 
   val topic = "test-spec"
   val propsProducer = new Properties()
@@ -85,8 +80,12 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
     val dir = new File(dataDirectory, "hadoop")
     dir.deleteOnExit()
     System.setProperty("hadoop.home.dir", dir.getAbsolutePath)
-    // KafkaLocal.start()
-    //KafkaLocal.createTopic(topic)
+    hbase = new HbaseLocal()
+    hbase.start()
+    Thread.sleep(10000)
+    kfServer = new KafkaLocal(false)
+    kfServer.start()
+    kfServer.createTopic(topic)
     val conf = new SparkConf().
       setAppName("spark-opentsdb-example-test").
       setMaster("local[*]")
@@ -146,7 +145,9 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
   }
 
   override def afterAll(): Unit = {
-    KafkaLocal.stop()
+    kfServer.stop()
+    Thread.sleep(5000)
+    hbase.stop()
     sparkContext.stop()
   }
 }

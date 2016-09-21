@@ -14,27 +14,34 @@
  * limitations under the License.
  */
 
-package com.cgnal.kafkaLocal
+package com.cgnal.services
 
 import java.io.File
 import java.net.InetSocketAddress
+import java.util
 import java.util.Properties
 
 import com.typesafe.config.ConfigFactory
 import kafka.admin.AdminUtils
+import kafka.server.{KafkaConfig, KafkaServer}
 import org.apache.commons.io.FileUtils
-import kafka.server.{ KafkaConfig, KafkaServer }
-import org.apache.log4j.LogManager
+import org.apache.log4j.{Level, LogManager, Logger}
 import org.apache.zookeeper.server._
+
+import collection.JavaConverters._
 
 /**
  * Created by cgnal on 12/09/16.
  *
- * Run an local instance of zookeeper and kafka
+ * Run an local instance of zookeeper (localhost:2181) and kafka(localhost:9292)
  */
-object KafkaLocal {
+class KafkaLocal(var runZookeeper: Boolean = true) {
 
-  //val logger = LogManager.getLogger(this.getClass)
+//  val loggers = LogManager.getCurrentLoggers().asScala.toList :+ LogManager.getRootLogger()
+//  loggers.foreach{l =>
+//      println(l)
+//      l.asInstanceOf[Logger].setLevel(Level.OFF)}
+
 
   var zkServer: Option[ServerCnxnFactory] = None
   var kafkaServer: Option[KafkaServer] = None
@@ -49,7 +56,7 @@ object KafkaLocal {
         FileUtils.deleteDirectory(dir)
 
       try {
-        val tickTime = 5000
+        val tickTime = 10000
         val server = new ZooKeeperServer(dir.getAbsoluteFile, dir.getAbsoluteFile, tickTime)
         val factory = ServerCnxnFactory.createFactory
         factory.configure(new InetSocketAddress("0.0.0.0", 2181), 1024)
@@ -86,14 +93,16 @@ object KafkaLocal {
         props.setProperty("zookeeper.connect", "localhost:2181")
         props.setProperty("advertised.host.name", "localhost")
         props.setProperty("connections.max.idle.ms", "9000000")
+        props.setProperty("zookeeper.connection.timeout.ms", "10000")
+        props.setProperty("zookeeper.session.timeout.ms", "10000")
 
         // flush every message.
-        props.setProperty("log.flush.interval", "1")
+        props.setProperty("log.flush.interval", "100")
 
         // flush every 1ms
-        props.setProperty("log.default.flush.scheduler.interval.ms", "1")
+        props.setProperty("log.default.flush.scheduler.interval.ms", "1000")
 
-        val server: KafkaServer = new KafkaServer(new KafkaConfig(props))
+        val server = new KafkaServer(new KafkaConfig(props, false))
         server.startup()
         println("KAFKA server on!!")
 
@@ -121,25 +130,35 @@ object KafkaLocal {
   }
 
   def start(): Unit = {
-    //startZK()
-    Thread.sleep(5000)
+    if(runZookeeper){
+      startZK()
+      Thread.sleep(5000)
+    }
+
     startKafka()
   }
 
   def stop(): Unit = {
     stopKafka()
-    Thread.sleep(2000)
-    stopZK()
+    if(runZookeeper){
+      Thread.sleep(2000)
+      stopZK()
+    }
+
   }
 
 }
 
 object Main extends App {
-  KafkaLocal.start()
+  //echo stat | nc <zookeeper ip> 2181
+  //echo mntr | nc <zookeeper ip> 2181
+  // echo isro  | nc <zookeeper ip> 2181
+  val kfServer = new KafkaLocal(true)
+  kfServer.start()
   val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
-  KafkaLocal.createTopic("test-spec")
+  //kfServer.createTopic(topic)
 
   //Thread.sleep(10000)
-  //KafkaLocal.stop()
+  //kfServer.stop()
 
 }
