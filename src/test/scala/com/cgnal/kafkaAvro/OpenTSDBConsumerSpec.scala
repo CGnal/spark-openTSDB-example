@@ -57,7 +57,7 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
     "bootstrap.servers" -> "localhost:9092",
     "metadata.broker.list" -> "localhost:9092"
   )
-  val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.docker.brokers")
+  val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.brokers")
   val props = Map("metadata.broker.list" -> brokers)
 
   val hadoopConf = HBaseConfiguration.create()
@@ -79,7 +79,7 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
     kafkaLocal.createTopic(topic)
   }
 
-  "OpenTSDBWriter" must {
+  "OpenTSDBConsumer" must {
     "should capture the stream from kafka and write it on HBASE" in {
 
       val thread = new Thread(new Runnable {
