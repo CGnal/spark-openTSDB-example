@@ -20,25 +20,49 @@ import java.io.File
 import java.util.Properties
 
 import com.cgnal.kafkaAvro.producers.KafkaAvroProducer
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.slf4j.LoggerFactory
 
 /**
   * Created by cgnal on 08/09/16.
   */
-object KafkaAvroProducerLocal extends App {
-  //val classLoader = this.getClass.getClassLoader
-  //val file = new File(classLoader.getResource("application.conf").getFile())
+object KafkaAvroProducerLocal {
 
-  val serializer = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.serializer")
-  val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.docker.brokers")
-  val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
-  val props = new Properties()
+  val logger = LoggerFactory.getLogger(this.getClass)
 
-  //brokers are sequences of ip:port (e.g., "localhost:9092, 193.204.187.22:9092")
-  props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers)
-  props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, serializer)
-  props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, serializer)
+  def main(args: Array[String]): Unit = {
+    var config = ConfigFactory.load()
 
-  new KafkaAvroProducer().run(3, 100, 30000L, props, topic)
+    args match {
+      case Array(kafkaBrokers:String, zkHostIp:String) =>
+
+       config = config
+         .withValue("spark-opentsdb-exmaples.zookeeper.host",  ConfigValueFactory.fromAnyRef(zkHostIp))
+         .withValue("spark-opentsdb-exmaples.kafka.brokers",   ConfigValueFactory.fromAnyRef(kafkaBrokers))
+
+        logger.info("Changed default config in")
+        logger.info(s"\t kafka: ${config.getString("spark-opentsdb-exmaples.kafka.brokers")}")
+        logger.info(s"\t zookeeper: ${config.getString("spark-opentsdb-exmaples.zookeeper.host")}")
+
+      case _ =>
+    }
+
+    val serializer = config.getString("spark-opentsdb-exmaples.kafka.serializer")
+    val brokers = config.getString("spark-opentsdb-exmaples.kafka.brokers")
+    val topic = config.getString("spark-opentsdb-exmaples.kafka.topic")
+    val zookeepers = config.getString("spark-opentsdb-exmaples.zookeeper.host")
+
+    val props = new Properties()
+
+    //brokers are sequences of ip:port (e.g., "localhost:9092, 193.204.187.22:9092")
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers)
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, serializer)
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, serializer)
+    props.put("zookeeper.connect", zookeepers)
+
+    new KafkaAvroProducer().run(3, 100, 30000L, props, topic)
+  }
+
+
 }

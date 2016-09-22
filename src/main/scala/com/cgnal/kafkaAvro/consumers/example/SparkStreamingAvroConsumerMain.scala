@@ -20,36 +20,65 @@ import java.io.File
 import java.util.Properties
 
 import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import kafka.admin.AdminUtils
 import org.apache.spark.SparkConf
-import org.apache.spark.streaming.{ Seconds, StreamingContext }
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by cgnal on 09/09/16.
   */
-object SparkStreamingAvroConsumerMain extends App {
+object SparkStreamingAvroConsumerMain  {
 
-  val dataDirectory = System.getProperty("java.io.tmpdir")
-  val dir = new File(dataDirectory, "hadoop")
-  dir.deleteOnExit()
+  //  val dataDirectory = System.getProperty("java.io.tmpdir")
+  //  val dir = new File(dataDirectory, "hadoop")
+  //  dir.deleteOnExit()
+  //
+  //  System.setProperty("hadoop.home.dir", "/")
+  def main(args: Array[String]): Unit = {
 
-  System.setProperty("hadoop.home.dir", "/")
-  val sparkConf = new SparkConf()
-    .setAppName("kafkaStreaming-consumer-test")
-    .setMaster("local[*]")
-  //.setSparkHome("dir.getAbsolutePath")
-  implicit val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(5))
+    val logger = LoggerFactory.getLogger(this.getClass)
 
-  val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
-  val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.docker.brokers")
-  val props = Map("metadata.broker.list" -> brokers)
 
-  val pippo = new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
+    val sparkConf = new SparkConf().
+      setAppName("spark-opentsdb-local-test").
+      set("spark.io.compression.codec", "lzf")
 
-  pippo.print(100)
+    var config = ConfigFactory.load()
 
-  ssc.start()
-  ssc.awaitTermination()
+    val test = args match {
+      case Array(testMode: String, zkHostIp: String, kafkaBrokers: String) =>
+        config = config
+          .withValue("spark-opentsdb-exmaples.zookeeper.host", ConfigValueFactory.fromAnyRef(zkHostIp))
+          .withValue("spark-opentsdb-exmaples.kafka.brokers", ConfigValueFactory.fromAnyRef(kafkaBrokers))
+
+        logger.info("Changed default config in")
+        logger.info(s"\t kafka: ${config.getString("spark-opentsdb-exmaples.kafka.brokers")}")
+        logger.info(s"\t zookeeper: ${config.getString("spark-opentsdb-exmaples.zookeeper.host")}")
+
+        testMode.toBoolean
+      case _ => true
+    }
+
+    if (test)
+      sparkConf.setMaster("local[*]")
+    else
+      sparkConf.setMaster("master")
+
+
+    implicit val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(5))
+
+    val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
+    val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.brokers")
+    val props = Map("metadata.broker.list" -> brokers)
+
+    val stream = new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
+
+    stream.print(100)
+
+    ssc.start()
+    ssc.awaitTermination()
+  }
 
 }

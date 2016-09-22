@@ -24,12 +24,13 @@ import com.gensler.scalavro.types.AvroType
 import com.typesafe.config.ConfigFactory
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by cgnal on 08/09/16.
   */
 class KafkaAvroProducer {
-  //val logger = Logger.getLogger(this.getClass)
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     *

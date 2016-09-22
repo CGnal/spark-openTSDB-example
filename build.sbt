@@ -3,6 +3,7 @@ import sbt._
 
 val assemblyName = "spark-opentsdb-examples-assembly"
 
+enablePlugins(JavaAppPackaging)
 
 import sbt.Keys._
 
@@ -66,8 +67,14 @@ def commonSettings(moduleName: String) = Seq(
   */
 val hadoopHBaseExcludes =
 (moduleId: ModuleID) => moduleId.
-  //excludeAll(ExclusionRule(organization = "org.mortbay.jetty")).
   excludeAll(ExclusionRule(organization = "javax.servlet"))
+
+val opentsdbExcludes =
+  (moduleId: ModuleID) => moduleId.
+    excludeAll(ExclusionRule(organization = "org.jboss.netty")).
+    excludeAll(ExclusionRule(organization = "org.slf4j")).
+    excludeAll(ExclusionRule(organization = "com.fasterxml.jackson.core"))
+
 
 
 
@@ -79,7 +86,7 @@ val commonDependencies = Seq(
   "log4j" % "log4j" % "1.2.14",
   "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
   "org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
-  "com.cgnal.spark" %% "spark-opentsdb" % "1.0" exclude("org.slf4j", "slf4j-log4j12"),
+  opentsdbExcludes("com.cgnal.spark" %% "spark-opentsdb" % "1.0"),
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   "org.apache.hbase" % "hbase-testing-util" % hbaseVersion % "test",
   hadoopHBaseExcludes("com.cloudera.sparkts" % "sparkts" % sparkTSVersion ),
@@ -117,15 +124,11 @@ def providedOrCompileDependencies(scope: String = "provided") = Seq(
   hadoopHBaseExcludes("org.apache.spark" %% "spark-sql" % sparkVersion),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-mllib" % sparkVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-yarn" % sparkVersion % scope),
-  //hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming" % sparkVersion),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-common" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-client" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-server" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-hadoop-compat" % hbaseVersion % scope)
- )//.map(_.exclude("ch.qos.logback", "logback-parent"))
-  //.map(_.exclude("ch.qos.logback", "logback-core"))
-  //.map(_.exclude("ch.qos.logback","logback-classic"))
-  //.map(_. exclude("org.slf4j", "slf4j-log4j12"))
+ )
 
 /**
   * working job
@@ -136,8 +139,6 @@ lazy val sparkJobs: Project = (project in file("."))
   .settings(commonSettings(ourArtifactName): _*)
   .settings(
     libraryDependencies ++= commonDependencies ++ providedOrCompileDependencies()
-    //dependencyOverrides += "com.google.guava" % "guava" % guavaVersion
-    //dependencyOverrides += "com.google.guava" % "guava" % guavaVersion
   ).settings(
   assemblyMergeStrategy in assembly := {
     case PathList(ps@_*) if ps.last endsWith "package-info.class" => MergeStrategy.first
@@ -150,6 +151,14 @@ lazy val sparkJobs: Project = (project in file("."))
     case "com/google/common/base/Stopwatch.class" => MergeStrategy.last
     case "com/google/common/io/Closeables.class" => MergeStrategy.last
     case "com/google/common/io/NullOutputStream.class" => MergeStrategy.last
+    case x if x.contains("org/jboss/netty/") => MergeStrategy.first
+    case x if x.contains("com/google/common/") => MergeStrategy.first
+    case x if x.contains("com/fasterxml/jackson/databind/") => MergeStrategy.first
+    case x if x.contains("com/fasterxml/jackson/core/") => MergeStrategy.first
+    case x if x.contains("com/fasterxml/jackson/annotation/") => MergeStrategy.first
+    case x if x.contains("com/esotericsoftware/") => MergeStrategy.first
+    case PathList("META-INF", "native",  "libnetty-transport-native-epoll.so") => MergeStrategy.first
+    case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
     case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
@@ -184,8 +193,3 @@ test in assembly := {}
 
 fork in test := true
 parallelExecution in Test := false
-
-
-
-
-
