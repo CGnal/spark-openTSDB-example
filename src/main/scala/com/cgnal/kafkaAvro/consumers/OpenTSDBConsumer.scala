@@ -11,6 +11,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka.KafkaUtils
+import org.slf4j.LoggerFactory
 
 import scala.util.Success
 
@@ -18,6 +19,8 @@ import scala.util.Success
   * Created by cgnal on 20/09/16.
   */
 class OpenTSDBConsumer{
+
+  val logger = LoggerFactory.getLogger(this.getClass)
   var openTSDBContext: Option[OpenTSDBContext] = None
 
   //val hadoopConf: Configuration = HBaseConfiguration.create()
@@ -27,6 +30,8 @@ class OpenTSDBConsumer{
 
 
   def run(implicit ssc: StreamingContext, hadoopConf: Configuration, topicsSet: Set[String], kafkaParams: Map[String, String]): Unit = {
+
+    logger.info("Consumer is running")
     val sparkContext = ssc.sparkContext
     val sqlContext = new SQLContext(sparkContext)
     openTSDBContext = Some(new OpenTSDBContext(sqlContext, Some(hadoopConf)))
@@ -41,7 +46,7 @@ class OpenTSDBConsumer{
       val Success(dataPoint) = io.read(bis)
       dataPoint
     }.map{dt =>
-      print(dt)
+      //print(dt)
       com.cgnal.spark.opentsdb.DataPoint[Double](dt.metric, dt.timestamp, dt.value, dt.tags)}
     stream.print(10)
     openTSDBContext.get.streamWrite(stream)

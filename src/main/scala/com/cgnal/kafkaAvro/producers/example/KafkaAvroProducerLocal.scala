@@ -24,8 +24,8 @@ import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.producer.ProducerConfig
 
 /**
- * Created by cgnal on 08/09/16.
- */
+  * Created by cgnal on 08/09/16.
+  */
 object KafkaAvroProducerLocal extends App {
   //val classLoader = this.getClass.getClassLoader
   //val file = new File(classLoader.getResource("application.conf").getFile())

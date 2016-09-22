@@ -3,19 +3,17 @@ package com.cgnal.services
 import java.io.File
 
 import org.apache.commons.io.FileUtils
-import org.apache.commons.logging.LogFactory
-import org.apache.hadoop.hbase.client.{ClusterConnection, ConnectionFactory, HBaseAdmin}
+import org.apache.hadoop.hbase.client.{ConnectionFactory, HBaseAdmin}
 import org.apache.hadoop.hbase.{HBaseTestingUtility, _}
-import org.apache.hadoop.hbase.spark.HBaseContext
 import org.apache.log4j.{Level, Logger}
+import org.slf4j.LoggerFactory
 
 /**
   * Created by cgnal on 19/09/16.
   */
 class HbaseLocal {
-  //var hBaseServer: Option[HBaseTestingUtility] = None
-  val rootLogger = Logger.getRootLogger()
-  rootLogger.setLevel(Level.ERROR)
+
+  val logger = LoggerFactory.getLogger(this.getClass)
   var  miniCluster: Option[HBaseTestingUtility] = None
   var hBaseAdmin: Option[HBaseAdmin] = None
 
@@ -66,13 +64,13 @@ class HbaseLocal {
           conn.getAdmin.createTable(tsdbTree)
           conn.getAdmin.createTable(tsdbMeta)
 
-          println(s"Table $tsdbUidTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbUidTable))}")
-          println(s"Table $tsdbTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbTable))}")
-          println(s"Table $tsdbTreeTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbTreeTable))}")
-          println(s"Table $tsdbMetaTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbMetaTable))}")
+          logger.info(s"Table $tsdbUidTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbUidTable))}")
+          logger.info(s"Table $tsdbTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbTable))}")
+          logger.info(s"Table $tsdbTreeTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbTreeTable))}")
+          logger.info(s"Table $tsdbMetaTable is created: ${conn.getAdmin.tableExists(TableName.valueOf(tsdbMetaTable))}")
         }
-        //finally admin.close()
-    } else println("HBASE is already up")
+      //finally admin.close()
+    } else logger.info("HBASE is already up")
   }
 
   def stop() = {

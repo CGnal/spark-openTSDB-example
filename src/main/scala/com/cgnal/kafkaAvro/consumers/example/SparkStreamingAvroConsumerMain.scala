@@ -26,8 +26,8 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{ Seconds, StreamingContext }
 
 /**
- * Created by cgnal on 09/09/16.
- */
+  * Created by cgnal on 09/09/16.
+  */
 object SparkStreamingAvroConsumerMain extends App {
 
   val dataDirectory = System.getProperty("java.io.tmpdir")

@@ -27,6 +27,7 @@ import kafka.server.{KafkaConfig, KafkaServer}
 import org.apache.commons.io.FileUtils
 import org.apache.log4j.{Level, LogManager, Logger}
 import org.apache.zookeeper.server._
+import org.slf4j.LoggerFactory
 
 import collection.JavaConverters._
 
@@ -37,14 +38,9 @@ import collection.JavaConverters._
  */
 class KafkaLocal(var runZookeeper: Boolean = true) {
 
-//  val loggers = LogManager.getCurrentLoggers().asScala.toList :+ LogManager.getRootLogger()
-//  loggers.foreach{l =>
-//      println(l)
-//      l.asInstanceOf[Logger].setLevel(Level.OFF)}
-
-
   var zkServer: Option[ServerCnxnFactory] = None
   var kafkaServer: Option[KafkaServer] = None
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   private def startZK(): Unit = {
     if (zkServer.isEmpty) {
@@ -61,20 +57,20 @@ class KafkaLocal(var runZookeeper: Boolean = true) {
         val factory = ServerCnxnFactory.createFactory
         factory.configure(new InetSocketAddress("0.0.0.0", 2181), 1024)
         factory.startup(server)
-        println("ZOOKEEPER server up!!")
+        logger.info("ZOOKEEPER server up!!")
         zkServer = Some(factory)
 
       } catch {
         case ex: Exception => System.err.println(s"Error in zookeeper server: ${ex.printStackTrace()}")
       } finally { dir.deleteOnExit() }
-    } else println("ZOOKEEPER is already up")
+    } else logger.info("ZOOKEEPER is already up")
   }
 
   private def stopZK() = {
     if (zkServer.isDefined) {
       zkServer.get.shutdown()
     }
-    println("ZOOKEEPER server stopped")
+    logger.info("ZOOKEEPER server stopped")
   }
 
   private def startKafka() = {
@@ -104,7 +100,7 @@ class KafkaLocal(var runZookeeper: Boolean = true) {
 
         val server = new KafkaServer(new KafkaConfig(props, false))
         server.startup()
-        println("KAFKA server on!!")
+        logger.info("KAFKA server on!!")
 
         kafkaServer = Some(server)
       } catch {
@@ -112,21 +108,21 @@ class KafkaLocal(var runZookeeper: Boolean = true) {
       } finally {
         dir.deleteOnExit()
       }
-    } else println("KAFKA is already up")
+    } else logger.info("KAFKA is already up")
   }
 
   private def stopKafka(): Unit = {
     if (kafkaServer.isDefined) {
       kafkaServer.get.shutdown()
 
-      println(s"KafkaServer ${kafkaServer.get.config.hostName} run state is: ${kafkaServer.get.kafkaController.isActive()} ")
+      logger.info(s"KafkaServer ${kafkaServer.get.config.hostName} run state is: ${kafkaServer.get.kafkaController.isActive()} ")
     }
-    println("KAFKA server stopped")
+    logger.info("KAFKA server stopped")
   }
 
   def createTopic(topic: String): Unit = {
     AdminUtils.createTopic(kafkaServer.get.zkUtils, topic, 3, 1, new Properties())
-    println(s"Topic $topic created!")
+    logger.info(s"Topic $topic created!")
   }
 
   def start(): Unit = {

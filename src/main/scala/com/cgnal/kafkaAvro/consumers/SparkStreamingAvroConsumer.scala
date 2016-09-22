@@ -25,17 +25,19 @@ import kafka.serializer.DefaultDecoder
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka.KafkaUtils
+import org.slf4j.LoggerFactory
 
 import scala.util.Success
 
 /**
- * Created by cgnal on 08/09/16.
- */
+  * Created by cgnal on 08/09/16.
+  */
 class SparkStreamingAvroConsumer {
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   def run(implicit ssc: StreamingContext, topicsSet: Set[String], kafkaParams: Map[String, String]): DStream[DataPoint] = {
 
-    println("in RUN!!")
+    logger.info("Consumer is running")
     assert(kafkaParams.contains("metadata.broker.list"))
 
     val inputStream: InputDStream[(Array[Byte], Array[Byte])] = KafkaUtils.createDirectStream[Array[Byte], Array[Byte], DefaultDecoder, DefaultDecoder](ssc, kafkaParams, topicsSet)

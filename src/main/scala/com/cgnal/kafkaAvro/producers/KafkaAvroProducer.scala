@@ -26,16 +26,16 @@ import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 /**
- * Created by cgnal on 08/09/16.
- */
+  * Created by cgnal on 08/09/16.
+  */
 class KafkaAvroProducer {
   //val logger = Logger.getLogger(this.getClass)
 
   /**
-   *
-   * @param messages number of messages to send to each interval
-   * @param intervalTime time in milliseconds between two iterations of sending messages
-   */
+    *
+    * @param messages number of messages to send to each interval
+    * @param intervalTime time in milliseconds between two iterations of sending messages
+    */
   def run(messages: Int, intervalTime: Long, props: Properties, topic: String): Unit = {
 
     val producer = new KafkaProducer[Array[Byte], Array[Byte]](props)
@@ -71,10 +71,10 @@ class KafkaAvroProducer {
   }
 
   /**
-   *
-   * @param messages number of messages to send to each interval
-   * @param intervalTime time in milliseconds between two iterations of sending messages
-   */
+    *
+    * @param messages number of messages to send to each interval
+    * @param intervalTime time in milliseconds between two iterations of sending messages
+    */
   def run(loops: Int, messages: Int, intervalTime: Long, props: Properties, topic: String): Unit = {
 
     val producer = new KafkaProducer[Array[Byte], Array[Byte]](props)

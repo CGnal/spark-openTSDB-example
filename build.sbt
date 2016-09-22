@@ -76,13 +76,10 @@ val commonDependencies = Seq(
   "org.apache.commons" % "commons-lang3" % commonsLangVersion exclude("org.slf4j", "slf4j-log4j12"),
   "commons-beanutils" % "commons-beanutils" % commonBeanutilsVersion exclude("org.slf4j", "slf4j-log4j12"),
   "com.gensler" %% "scalavro" % "0.6.2" exclude("org.slf4j", "slf4j-log4j12"),
+  "log4j" % "log4j" % "1.2.14",
   "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
   "org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
-  //hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion),
   "com.cgnal.spark" %% "spark-opentsdb" % "1.0" exclude("org.slf4j", "slf4j-log4j12"),
-  //"org.apache.kafka" %% "kafka" % "0.9.0.1" exclude(slf4jLog4jOrg, slf4jLog4jArtifact),
-
-
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   "org.apache.hbase" % "hbase-testing-util" % hbaseVersion % "test",
   hadoopHBaseExcludes("com.cloudera.sparkts" % "sparkts" % sparkTSVersion ),
@@ -105,7 +102,10 @@ val commonDependencies = Seq(
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-minicluster" % hadoopVersion % "test"),
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-common" % hadoopVersion % "test" classifier "tests" extra "type" -> "test-jar"),
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % hadoopVersion % "test" classifier "tests")
-)
+ )//.map(_.exclude("ch.qos.logback", "logback-parent"))
+ // .map(_.exclude("ch.qos.logback", "logback-core"))
+ // .map(_.exclude("ch.qos.logback","logback-classic"))
+ // .map(_. exclude("org.slf4j", "slf4j-log4j12"))
 
 /**
   * when used inside the IDE they are imported with scope "compile",
@@ -122,7 +122,10 @@ def providedOrCompileDependencies(scope: String = "provided") = Seq(
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-client" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-server" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-hadoop-compat" % hbaseVersion % scope)
-)
+ )//.map(_.exclude("ch.qos.logback", "logback-parent"))
+  //.map(_.exclude("ch.qos.logback", "logback-core"))
+  //.map(_.exclude("ch.qos.logback","logback-classic"))
+  //.map(_. exclude("org.slf4j", "slf4j-log4j12"))
 
 /**
   * working job
