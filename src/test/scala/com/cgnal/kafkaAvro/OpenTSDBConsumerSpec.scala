@@ -43,7 +43,7 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
   val producer = new KafkaAvroProducer()
   var sparkContext: SparkContext = _
   var streamingContext: StreamingContext = _
-  val consumer = new OpenTSDBConsumer()
+  var consumer : OpenTSDBConsumer = _
   val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric")
 
   val propsProducer = new Properties()
@@ -87,7 +87,8 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
       })
       thread.start()
 
-      consumer.run(streamingContext, hadoopConf, Set(topic), props)
+      consumer = new OpenTSDBConsumer(streamingContext, hadoopConf)
+      consumer.run(Set(topic), props)
       streamingContext.start()
       Thread.sleep(2000)
       streamingContext.stop(false, false)

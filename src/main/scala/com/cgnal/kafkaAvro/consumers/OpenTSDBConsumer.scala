@@ -18,23 +18,26 @@ import scala.util.Success
 /**
   * Created by cgnal on 20/09/16.
   */
-class OpenTSDBConsumer{
+class OpenTSDBConsumer(ssc: StreamingContext, hadoopConf: Configuration){
 
   val logger = LoggerFactory.getLogger(this.getClass)
-  var openTSDBContext: Option[OpenTSDBContext] = None
+  var openTSDBContext: Option[OpenTSDBContext] = initOpenTSDB()
 
-  //val hadoopConf: Configuration = HBaseConfiguration.create()
-  //hadoopConf.set("hbase.master", "127.0.0.1:60000")
-  //hadoopConf.set("hbase.zookeeper.quorum", "127.0.0.1")
-  //hadoopConf.set("hbase.zookeeper.property.clientPort", "2181")
-
-
-  def run(implicit ssc: StreamingContext, hadoopConf: Configuration, topicsSet: Set[String], kafkaParams: Map[String, String]): Unit = {
-
-    logger.info("Consumer is running")
+  private def initOpenTSDB() = {
     val sparkContext = ssc.sparkContext
     val sqlContext = new SQLContext(sparkContext)
-    openTSDBContext = Some(new OpenTSDBContext(sqlContext, Some(hadoopConf)))
+    Some(new OpenTSDBContext(sqlContext, Some(hadoopConf)))
+  }
+
+  def this (ssc: StreamingContext, hadoopConf: Configuration, keytab:String, principal:String) = {
+    this(ssc, hadoopConf)
+    openTSDBContext.get.keytab = keytab
+    openTSDBContext.get.principal = principal
+    openTSDBContext.get.keytabLocalTempDir = "/tmp"
+  }
+
+  def run(topicsSet: Set[String], kafkaParams: Map[String, String]): Unit = {
+
     assert(kafkaParams.contains("metadata.broker.list"))
 
     val inputStream: InputDStream[(Array[Byte], Array[Byte])] = KafkaUtils.createDirectStream[Array[Byte], Array[Byte], DefaultDecoder, DefaultDecoder](ssc, kafkaParams, topicsSet)

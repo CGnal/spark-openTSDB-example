@@ -73,6 +73,7 @@ val opentsdbExcludes =
   (moduleId: ModuleID) => moduleId.
     excludeAll(ExclusionRule(organization = "org.jboss.netty")).
     excludeAll(ExclusionRule(organization = "org.slf4j")).
+    excludeAll(ExclusionRule(organization = "org.apache.spark")).
     excludeAll(ExclusionRule(organization = "com.fasterxml.jackson.core"))
 
 
@@ -82,10 +83,15 @@ val commonDependencies = Seq(
 
   "org.apache.commons" % "commons-lang3" % commonsLangVersion exclude("org.slf4j", "slf4j-log4j12"),
   "commons-beanutils" % "commons-beanutils" % commonBeanutilsVersion exclude("org.slf4j", "slf4j-log4j12"),
-  "com.gensler" %% "scalavro" % "0.6.2" exclude("org.slf4j", "slf4j-log4j12"),
+  ("com.gensler" %% "scalavro" % "0.6.2")
+    .exclude("org.slf4j", "slf4j-log4j12")
+    .exclude("org.apache.spark", "spark-sql_2.10")
+    .exclude("org.apache.spark", "spark-core_2.10")
+    .exclude("org.apache.spark", "spark-streaming_2.10"),
   "log4j" % "log4j" % "1.2.14",
-  "org.apache.spark" %% "spark-streaming-kafka" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
-  "org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
+  ("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion )
+    .exclude("org.slf4j", "slf4j-log4j12"),
+  //"org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
   opentsdbExcludes("com.cgnal.spark" %% "spark-opentsdb" % "1.0"),
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   "org.apache.hbase" % "hbase-testing-util" % hbaseVersion % "test",
@@ -119,11 +125,13 @@ val commonDependencies = Seq(
   * Otherwise when submitted with spark_submit they are  "provided"
   */
 def providedOrCompileDependencies(scope: String = "provided") = Seq(
+  "org.apache.kafka" %% "kafka" % "0.9.0-kafka-2.0.0" % scope,
   hadoopHBaseExcludes("com.databricks" %% "spark-avro" % sparkAvroVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-core" % sparkVersion % scope),
-  hadoopHBaseExcludes("org.apache.spark" %% "spark-sql" % sparkVersion),
+  hadoopHBaseExcludes("org.apache.spark" %% "spark-sql" % sparkVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-mllib" % sparkVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-yarn" % sparkVersion % scope),
+  hadoopHBaseExcludes("org.apache.spark" %% "spark-streaming" % sparkVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-common" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-client" % hbaseVersion % scope),
   hadoopHBaseExcludes("org.apache.hbase" % "hbase-server" % hbaseVersion % scope),
@@ -193,3 +201,87 @@ test in assembly := {}
 
 fork in test := true
 parallelExecution in Test := false
+
+
+/***********************************
+  *
+  * PACKAGING
+  *
+  **********************************/
+
+val launcherFilename = "run.sh"
+
+val sparkJobsSimplClassNames = List(
+  "com.cgnal.kafkaAvro.consumers.example.OpenTSDBConsumerMain"
+)
+
+def addLauncherScriptSh(mainClass: String): String = {
+  s"""#!/usr/bin/env bash
+./${launcherFilename} ${mainClass}
+  """
+}
+
+def addBaseLauncherSh: String =
+  """#!/usr/bin/env bash
+
+if [ ! -d logs ];
+then
+  mkdir -p logs
+fi
+
+
+DATE=$(date +%s)
+spark-submit --executor-memory 1200M \
+  --jars $(JARS=("$(pwd)/lib"/*.jar); IFS=,; echo "${JARS[*]}") \
+  --driver-class-path /etc/hbase/conf \
+  --conf spark.executor.extraClassPath=/etc/hbase/conf \
+  --conf spark.executor.extraJavaOptions=-Djava.security.auth.login.config=/tmp/jaas.conf \
+  --conf spark.driver.extraJavaOptions="-Dspark-opentsdb-exmaples.hbase.master=eligo105.eligotech.private:60000 -Dspark-opentsdb-exmaples.zookeeper.host=eligo105.eligotech.private:2181/kafka -Dspark-opentsdb-exmaples.kafka.brokers=192.168.2.108:9092" \
+  --master yarn --deploy-mode client \
+  --keytab flanotte.keytab \
+  --principal flanotte@SERVER.ELIGOTECH.COM \
+  --class com.cgnal.kafkaAvro.consumers.example.OpenTSDBConsumerMain spark-opentsdb-examples_2.10-1.0.0-SNAPSHOT.jar  false flanotte.keytab flanotte@SERVER.ELIGOTECH.COM \
+  >  "./logs/${DATE}_OpenTSDBConsumerMain.out" \
+  2> "./logs/${DATE}_OpenTSDBConsumerMain.err"
+
+# yarn logs -applicationId=$(getApplicationId "./logs/${DATE}_${CLASSNAME}.err") > "./logs/${DATE}_${CLASSNAME}.executors.log"
+                                                                                    """
+
+mappings in Universal += file("target/scripts/run.sh") -> "run.sh"
+//mappings in Universal += file("target/scripts/OpenTSDBConsumerMain.sh") -> "OpenTSDBConsumerMain.sh"
+
+/**
+  * strip organization in packaged file
+  */
+mappings in Universal <<= (mappings in Universal ) map { x=>
+
+  val ourPackage: (Seq[(File, String)], Seq[(File, String)]) = x.partition(fileAndMapping=>{
+    fileAndMapping._1.getName().endsWith(packagedArtifactName)
+  })
+
+  (ourPackage._1.head._1,packagedArtifactName) :: ourPackage._2.toList
+}
+
+
+
+/**
+  * adding launch scripts
+  */
+val createLaunchScriptsTask  = Def.task {
+
+  val scriptFileDirectory: File = baseDirectory.value / "target" / "scripts"
+  scriptFileDirectory.mkdir()
+
+  IO.write( scriptFileDirectory / launcherFilename, addBaseLauncherSh )
+
+// used in case there are multiple main classes
+//  sparkJobsSimplClassNames.foreach( x=> {
+//    val objName = x.split("\\.").last
+//    val scriptFile = scriptFileDirectory / s"${objName}.sh"
+//    val content = addLauncherScriptSh(x)
+//    IO.write(scriptFile, content)
+//  })
+}
+
+compile in Compile <<= (compile in Compile) dependsOn createLaunchScriptsTask
+packageZipTarball in Universal <<= (packageZipTarball in Universal) dependsOn createLaunchScriptsTask

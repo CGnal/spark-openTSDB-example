@@ -22,6 +22,10 @@ import java.util.Properties
 import com.cgnal.DataPoint
 import com.gensler.scalavro.types.AvroType
 import com.typesafe.config.ConfigFactory
+import kafka.admin.AdminUtils
+import org.I0Itec.zkclient.{ZkClient, ZkConnection}
+import kafka.utils. ZkUtils
+import kafka.utils.ZKStringSerializer$
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.LoggerFactory
@@ -69,6 +73,13 @@ class KafkaAvroProducer {
       println(s"Kafka Producer closed in $time sec")
 
     }
+  }
+
+  def createTopic(topic:String, zkHost: String):Unit = {
+
+    val zkClient = new ZkClient(zkHost, 10000, 10000, ZKStringSerializer$.MODULE$)
+    val zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHost), false)
+    AdminUtils.createTopic(zkUtils, topic, 2, 1, new Properties())
   }
 
   /**

@@ -30,42 +30,27 @@ import org.slf4j.LoggerFactory
   * Created by cgnal on 09/09/16.
   */
 object SparkStreamingAvroConsumerMain  {
+  val logger = LoggerFactory.getLogger(this.getClass)
 
-  //  val dataDirectory = System.getProperty("java.io.tmpdir")
-  //  val dir = new File(dataDirectory, "hadoop")
-  //  dir.deleteOnExit()
-  //
-  //  System.setProperty("hadoop.home.dir", "/")
   def main(args: Array[String]): Unit = {
-
-    val logger = LoggerFactory.getLogger(this.getClass)
-
 
     val sparkConf = new SparkConf().
       setAppName("spark-opentsdb-local-test").
-      set("spark.io.compression.codec", "lzf")
+    //set("spark.io.compression.codec", "lzf")
 
     var config = ConfigFactory.load()
 
     val test = args match {
-      case Array(testMode: String, zkHostIp: String, kafkaBrokers: String) =>
-        config = config
-          .withValue("spark-opentsdb-exmaples.zookeeper.host", ConfigValueFactory.fromAnyRef(zkHostIp))
-          .withValue("spark-opentsdb-exmaples.kafka.brokers", ConfigValueFactory.fromAnyRef(kafkaBrokers))
-
-        logger.info("Changed default config in")
-        logger.info(s"\t kafka: ${config.getString("spark-opentsdb-exmaples.kafka.brokers")}")
-        logger.info(s"\t zookeeper: ${config.getString("spark-opentsdb-exmaples.zookeeper.host")}")
-
+      case Array(testMode: String) =>
+        logger.info(s"kafka: ${config.getString("spark-opentsdb-exmaples.kafka.brokers")}")
+        logger.info(s"zookeeper: ${config.getString("spark-opentsdb-exmaples.zookeeper.host")}")
         testMode.toBoolean
+
       case _ => true
     }
 
     if (test)
       sparkConf.setMaster("local[*]")
-    else
-      sparkConf.setMaster("master")
-
 
     implicit val ssc: StreamingContext = new StreamingContext(sparkConf, Seconds(5))
 
