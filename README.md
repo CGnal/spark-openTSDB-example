@@ -38,6 +38,7 @@ Per aggiornare solo il jar senza dipendenze estrne
 
 
 # Run consumer in spark
+```bash
 
   spark-submit --executor-memory 1200M \
   --jars $(JARS=("$(pwd)/lib"/*.jar); IFS=,; echo "${JARS[*]}") \
@@ -49,6 +50,8 @@ Per aggiornare solo il jar senza dipendenze estrne
   --keytab flanotte.keytab \
   --principal flanotte@SERVER.ELIGOTECH.COM \
   --class com.cgnal.kafkaAvro.consumers.example.OpenTSDBConsumerMain spark-opentsdb-examples_2.10-1.0.0-SNAPSHOT.jar  false flanotte.keytab flanotte@SERVER.ELIGOTECH.COM
+```  
+  
 
 # spark-cdh-template
 A spark sbt template that you can use for bootstrapping your spark projetcs: http://www.davidgreco.me/blog/2015/04/11/a-spark-sbt-based-project-template/
