@@ -36,7 +36,7 @@ object KafkaAvroProducerLocal {
 
     args match {
       case Array(kafkaBrokers:String, zkHostIp:String) =>
-
+        //192.168.2.108:9092 eligo105.eligotech.private:2181/kafka
        config = config
          .withValue("spark-opentsdb-exmaples.zookeeper.host",  ConfigValueFactory.fromAnyRef(zkHostIp))
          .withValue("spark-opentsdb-exmaples.kafka.brokers",   ConfigValueFactory.fromAnyRef(kafkaBrokers))
@@ -51,6 +51,7 @@ object KafkaAvroProducerLocal {
     val serializer = config.getString("spark-opentsdb-exmaples.kafka.serializer")
     val brokers = config.getString("spark-opentsdb-exmaples.kafka.brokers")
     val topic = config.getString("spark-opentsdb-exmaples.kafka.topic")
+    val metric = config.getString("spark-opentsdb-exmaples.openTSDB.metric")
     val zookeepers = config.getString("spark-opentsdb-exmaples.zookeeper.host")
 
     val props = new Properties()
@@ -60,8 +61,13 @@ object KafkaAvroProducerLocal {
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, serializer)
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, serializer)
     props.put("zookeeper.connect", zookeepers)
+    //props.put("host.name", "eligo108.eligotech.private")
+    //props.put("advertised.host.name", "eligo108.eligotech.private")
 
-    new KafkaAvroProducer().run(3, 100, 30000L, props, topic)
+    val producer = new KafkaAvroProducer()
+    //producer.createTopic(topic,zookeepers)
+    //println("********TOPIC CREATED **************")
+    producer.run(100, 100000, 300L, props, topic, metric.toInt)
   }
 
 

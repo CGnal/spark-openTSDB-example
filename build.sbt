@@ -67,6 +67,7 @@ def commonSettings(moduleName: String) = Seq(
   */
 val hadoopHBaseExcludes =
 (moduleId: ModuleID) => moduleId.
+  excludeAll(ExclusionRule(organization = "org.mortbay.jetty")).
   excludeAll(ExclusionRule(organization = "javax.servlet"))
 
 val opentsdbExcludes =
@@ -83,15 +84,13 @@ val commonDependencies = Seq(
 
   "org.apache.commons" % "commons-lang3" % commonsLangVersion exclude("org.slf4j", "slf4j-log4j12"),
   "commons-beanutils" % "commons-beanutils" % commonBeanutilsVersion exclude("org.slf4j", "slf4j-log4j12"),
-  ("com.gensler" %% "scalavro" % "0.6.2")
-    .exclude("org.slf4j", "slf4j-log4j12")
-    .exclude("org.apache.spark", "spark-sql_2.10")
-    .exclude("org.apache.spark", "spark-core_2.10")
-    .exclude("org.apache.spark", "spark-streaming_2.10"),
   "log4j" % "log4j" % "1.2.14",
+  "org.apache.avro" % "avro" % "1.8.1",
+  "com.typesafe" % "config" % "1.0.2",
   ("org.apache.spark" %% "spark-streaming-kafka" % sparkVersion )
     .exclude("org.slf4j", "slf4j-log4j12"),
-  //"org.apache.spark" %% "spark-streaming" % sparkVersion exclude("org.slf4j", "slf4j-log4j12"),
+  "com.twitter" %% "bijection-avro" % "0.9.2",
+  "com.twitter" %% "bijection-core" % "0.9.2",
   opentsdbExcludes("com.cgnal.spark" %% "spark-opentsdb" % "1.0"),
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   "org.apache.hbase" % "hbase-testing-util" % hbaseVersion % "test",
@@ -115,16 +114,13 @@ val commonDependencies = Seq(
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-minicluster" % hadoopVersion % "test"),
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-common" % hadoopVersion % "test" classifier "tests" extra "type" -> "test-jar"),
   hadoopHBaseExcludes("org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % hadoopVersion % "test" classifier "tests")
- )//.map(_.exclude("ch.qos.logback", "logback-parent"))
- // .map(_.exclude("ch.qos.logback", "logback-core"))
- // .map(_.exclude("ch.qos.logback","logback-classic"))
- // .map(_. exclude("org.slf4j", "slf4j-log4j12"))
+ )
 
 /**
   * when used inside the IDE they are imported with scope "compile",
   * Otherwise when submitted with spark_submit they are  "provided"
   */
-def providedOrCompileDependencies(scope: String = "provided") = Seq(
+def providedOrCompileDependencies(scope: String = "compile") = Seq(
   "org.apache.kafka" %% "kafka" % "0.9.0-kafka-2.0.0" % scope,
   hadoopHBaseExcludes("com.databricks" %% "spark-avro" % sparkAvroVersion % scope),
   hadoopHBaseExcludes("org.apache.spark" %% "spark-core" % sparkVersion % scope),

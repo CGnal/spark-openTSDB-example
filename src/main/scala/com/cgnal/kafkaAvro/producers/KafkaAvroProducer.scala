@@ -16,17 +16,20 @@
 
 package com.cgnal.kafkaAvro.producers
 
+import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.Properties
 
-import com.cgnal.DataPoint
-import com.gensler.scalavro.types.AvroType
+import com.cgnal.avro.Event
+
+import scala.collection.JavaConverters._
+import com.twitter.bijection.Injection
+import com.twitter.bijection.avro.{GenericAvroCodecs, SpecificAvroCodecs}
 import com.typesafe.config.ConfigFactory
 import kafka.admin.AdminUtils
 import org.I0Itec.zkclient.{ZkClient, ZkConnection}
-import kafka.utils. ZkUtils
+import kafka.utils.ZkUtils
 import kafka.utils.ZKStringSerializer$
-import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.slf4j.LoggerFactory
 
@@ -35,31 +38,35 @@ import org.slf4j.LoggerFactory
   */
 class KafkaAvroProducer {
   val logger = LoggerFactory.getLogger(this.getClass)
+  val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric")
 
+  implicit private val specificAvroBinaryInjection: Injection[Event, Array[Byte]] = SpecificAvroCodecs.toBinary[Event]
   /**
     *
     * @param messages number of messages to send to each interval
     * @param intervalTime time in milliseconds between two iterations of sending messages
+    * @param props
+    * @param topic
+    * @param event_type_id used as metric in opentsdb
     */
-  def run(messages: Int, intervalTime: Long, props: Properties, topic: String): Unit = {
+  def run(messages: Int, intervalTime: Long, props: Properties, topic: String, event_type_id: Int): Unit = {
 
     val producer = new KafkaProducer[Array[Byte], Array[Byte]](props)
-    val buf = new ByteArrayOutputStream()
-    val schema = AvroType[DataPoint]
+
+    //val schema = AvroType[Event]
     val startTime = System.currentTimeMillis
     try {
       while (true) {
 
         for (i <- 0 to messages) {
-          val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
-          val epoch = ts.getTime
-          val data = DataPoint("metric", epoch, System.currentTimeMillis(), Map("tag" -> i.toString))
 
-          schema.io.write(data, buf)
-          val key = s"${data.timestamp}-${data.tags.getOrElse("tag", "-1")}"
-          val message = new ProducerRecord[Array[Byte], Array[Byte]](topic, key.getBytes, buf.toByteArray)
+          //val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
+          //val epoch = ts.getTime
+
+          val data =  new Event(3L, "sensor1", System.currentTimeMillis(), metric.toInt, "source", "location", "host", "service", ByteBuffer.wrap("raw data should go here".getBytes()), Map("tag".asInstanceOf[CharSequence] -> "value".asInstanceOf[CharSequence]).asJava)
+          val bytesData = specificAvroBinaryInjection(data)
+          val message = new ProducerRecord[Array[Byte], Array[Byte]](topic, "".getBytes, bytesData)
           producer.send(message)
-          buf.reset()
         }
         //logger.info(s"Written $messages messages")
         println(s"Written $messages messages, now await $intervalTime millisec")
@@ -79,35 +86,34 @@ class KafkaAvroProducer {
 
     val zkClient = new ZkClient(zkHost, 10000, 10000, ZKStringSerializer$.MODULE$)
     val zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHost), false)
-    AdminUtils.createTopic(zkUtils, topic, 2, 1, new Properties())
+    AdminUtils.createTopic(zkUtils, topic, 4, 2, new Properties())
   }
 
   /**
     *
+    * @param loops
     * @param messages number of messages to send to each interval
     * @param intervalTime time in milliseconds between two iterations of sending messages
+    * @param props
+    * @param topic
+    * @param event_type_id used as metric in opentsdb
     */
-  def run(loops: Int, messages: Int, intervalTime: Long, props: Properties, topic: String): Unit = {
+  def run(loops: Int, messages: Int, intervalTime: Long, props: Properties, topic: String, event_type_id: Int): Unit = {
 
     val producer = new KafkaProducer[Array[Byte], Array[Byte]](props)
-    val buf = new ByteArrayOutputStream()
-    val schema = AvroType[DataPoint]
     val startTime = System.currentTimeMillis
-
-    val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric")
     try {
       for (loop <- 0 until loops) {
 
         for (i <- 0 to messages) {
-          val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
-          val epoch = ts.getTime
-          val data = DataPoint(metric, epoch, i.toDouble, Map("tag" -> "hello"))
+          //val ts = new Timestamp(System.currentTimeMillis() + (i * 1000L))
+          //val epoch = ts.getTime
 
-          schema.io.write(data, buf)
-          val key = s"${data.timestamp}-${data.tags.getOrElse("tag", "-1")}"
-          val message = new ProducerRecord[Array[Byte], Array[Byte]](topic, key.getBytes, buf.toByteArray)
+          val data =  new Event(3L, "sensor1", System.currentTimeMillis(), metric.toInt, "source", "location", "host", "service", ByteBuffer.wrap("raw data should go here".getBytes()), Map("tag".asInstanceOf[CharSequence] -> "value".asInstanceOf[CharSequence]).asJava)
+          val bytes = specificAvroBinaryInjection(data)
+
+          val message = new ProducerRecord[Array[Byte], Array[Byte]](topic, bytes)
           producer.send(message)
-          buf.reset()
         }
         //logger.info(s"Written $messages messages")
         println(s"Written $messages messages, now await $intervalTime millisec")

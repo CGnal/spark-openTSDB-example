@@ -1,7 +1,7 @@
 package com.cgnal.kafkaAvro.consumers.example
 
 import com.cgnal.kafkaAvro.consumers.{OpenTSDBConsumer, SparkStreamingAvroConsumer}
-import com.cgnal.spark.opentsdb.OpenTSDBContext
+import com.cgnal.kafkaAvro.converters.{EventConverter, SimpleEventConverter}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.spark.sql.SQLContext
@@ -16,7 +16,7 @@ import scala.util.Try
   */
 object OpenTSDBConsumerMain{
   val logger = LoggerFactory.getLogger(this.getClass)
-  var consumer: OpenTSDBConsumer = _
+  var consumer: OpenTSDBConsumer[SimpleEventConverter] = _
 
 
 
@@ -66,15 +66,16 @@ object OpenTSDBConsumerMain{
     val props = Map("metadata.broker.list" -> brokers)
     val keyTab = Try(config.getString("spark-opentsdb-exmaples.openTSDBContext.keytab"))
     val principal = Try(config.getString("spark-opentsdb-exmaples.openTSDBContext.principal"))
+
     if(keyTab.isSuccess && principal.isSuccess) {
       println("running the consumer with tabkey and principal")
-      consumer = new OpenTSDBConsumer(ssc, hadoopConf, keyTab.get, principal.get)
+      consumer = new OpenTSDBConsumer[SimpleEventConverter](ssc, hadoopConf, Set(topic), props, keyTab.get, principal.get)
     }
     else{
-      consumer = new OpenTSDBConsumer(ssc, hadoopConf)
+      consumer = new OpenTSDBConsumer[SimpleEventConverter](ssc, hadoopConf, Set(topic), props)
     }
 
-    consumer.run(Set(topic), props)
+    consumer.run()
 
     ssc.start()
     ssc.awaitTermination()

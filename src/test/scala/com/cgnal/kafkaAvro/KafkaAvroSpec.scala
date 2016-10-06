@@ -1,44 +1,13 @@
-/*
- * Copyright 2016 CGnal S.p.A.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
- * Copyright 2016 CGnal S.p.A.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.cgnal.DataPointConsumer.sparkStreaming
-
+package com.cgnal.kafkaAvro
 import java.io.File
 import java.util.Properties
 
-import com.cgnal.DataPoint
 import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
+import com.cgnal.kafkaAvro.converters.SimpleEventConverter
 import com.cgnal.kafkaAvro.producers.KafkaAvroProducer
 import com.cgnal.services.{HbaseLocal, KafkaLocal}
+import com.cgnal.spark.opentsdb.DataPoint
+import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.streaming.dstream.DStream
@@ -47,21 +16,12 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest._
 
 import scala.collection.JavaConversions._
-
 /**
- * Created by cgnal on 09/09/16.
- */
+  * Created by cgnal on 04/10/16.
+  */
 class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
-
-  var sparkContext: SparkContext = _
-  implicit var streamingContext: StreamingContext = _
-  val producer = new KafkaAvroProducer()
-  val consumer = new SparkStreamingAvroConsumer()
-  var hbase: HbaseLocal = _
-  var kfServer: KafkaLocal = _
-
-
   val topic = "test-spec"
+  val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric").toInt
   val propsProducer = new Properties()
   propsProducer.put("bootstrap.servers", "localhost:9092")
   propsProducer.put("key.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer")
@@ -73,6 +33,16 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
     "bootstrap.servers" -> "localhost:9092",
     "metadata.broker.list" -> "localhost:9092"
   )
+
+  var sparkContext: SparkContext = _
+  implicit var streamingContext: StreamingContext = _
+  val producer = new KafkaAvroProducer()
+  var consumer: SparkStreamingAvroConsumer[SimpleEventConverter] = _
+  var hbase: HbaseLocal = _
+  var kfServer: KafkaLocal = _
+
+
+
 
   override def beforeAll(): Unit = {
 
@@ -95,12 +65,14 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
 
     sparkContext = new SparkContext(conf)
     streamingContext = new StreamingContext(sparkContext, Milliseconds(500))
+    consumer = new SparkStreamingAvroConsumer(streamingContext, Set(topic), propsConsumer)
+
   }
 
   "KafkaAvroSpec" must {
     "produce 200 data-points on topic test-spec" in {
 
-      producer.run(2, 100, 0L, propsProducer, topic)
+      producer.run(2, 100, 0L, propsProducer, topic, metric)
 
       val propsTestConsumer = new Properties()
       propsTestConsumer.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer")
@@ -122,13 +94,13 @@ class KafkaAvroSpec extends WordSpec with MustMatchers with BeforeAndAfterAll {
 
     "consume 200 data-point on topic test-spec" in {
 
-      var resultsRDD = scala.collection.mutable.ArrayBuffer.empty[Array[DataPoint]]
+      var resultsRDD = scala.collection.mutable.ArrayBuffer.empty[Array[DataPoint[Double]]]
       val thread = new Thread(new Runnable {
-        override def run(): Unit = producer.run(2, 100, 500, propsProducer, topic)
+        override def run(): Unit = producer.run(2, 100, 500, propsProducer, topic, metric.toInt)
       })
       thread.start()
 
-      val stream: DStream[DataPoint] = consumer.run(streamingContext, Set(topic), propsConsumer)
+      val stream: DStream[DataPoint[Double]] = consumer.run()
       stream.foreachRDD { rdd =>
         resultsRDD += rdd.collect()
         ()

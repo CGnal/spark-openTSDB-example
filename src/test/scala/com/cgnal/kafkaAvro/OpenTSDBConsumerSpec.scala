@@ -6,6 +6,7 @@ import java.util.Properties
 import java.util.concurrent.Executors
 
 import com.cgnal.kafkaAvro.consumers.OpenTSDBConsumer
+import com.cgnal.kafkaAvro.converters.SimpleEventConverter
 import com.cgnal.kafkaAvro.producers.KafkaAvroProducer
 import com.cgnal.services.{HbaseLocal, KafkaLocal}
 import com.cgnal.spark.opentsdb.DataPoint
@@ -43,8 +44,8 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
   val producer = new KafkaAvroProducer()
   var sparkContext: SparkContext = _
   var streamingContext: StreamingContext = _
-  var consumer : OpenTSDBConsumer = _
-  val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric")
+  var consumer : OpenTSDBConsumer[SimpleEventConverter] = _
+  val metric = ConfigFactory.load().getString("spark-opentsdb-exmaples.openTSDB.metric").toInt
 
   val propsProducer = new Properties()
   propsProducer.put("bootstrap.servers", "localhost:9092")
@@ -83,12 +84,12 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
     "should capture the stream from kafka and write it on HBASE" in {
 
       val thread = new Thread(new Runnable {
-        override def run(): Unit = producer.run(2, 100, 500, propsProducer, topic)
+        override def run(): Unit = producer.run(2, 100, 500, propsProducer, topic, metric)
       })
       thread.start()
 
-      consumer = new OpenTSDBConsumer(streamingContext, hadoopConf)
-      consumer.run(Set(topic), props)
+      consumer = new OpenTSDBConsumer(streamingContext, hadoopConf, Set(topic), props)
+      consumer.run()
       streamingContext.start()
       Thread.sleep(2000)
       streamingContext.stop(false, false)
@@ -102,7 +103,9 @@ class OpenTSDBConsumerSpec extends WordSpec with MustMatchers with BeforeAndAfte
 
       val getRdd: RDD[(ImmutableBytesWritable, Result)] = hbaseContext.hbaseRDD(TableName.valueOf("tsdb"), scan)
 
-      val df = consumer.openTSDBContext.get.loadDataFrame(metric, Map("tag"-> "hello"), None)
+      //val df = consumer.openTSDBContext.get.loadDataFrame(metric.toString, Map("tag"-> "hello"), None)
+      val df = consumer.openTSDBContext.get.loadDataFrame(metric.toString, Map("id" -> "S01"), None)
+
 
       df.schema must be(
         StructType(

@@ -16,60 +16,54 @@
 
 package com.cgnal.kafkaAvro.consumers
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, Serializable}
 
-import com.cgnal.DataPoint
-import com.gensler.scalavro.io.AvroTypeIO
-import com.gensler.scalavro.types.AvroType
+import akka.actor.TypedActor.SerializedMethodCall
+import com.cgnal.avro.Event
+import com.cgnal.kafkaAvro.converters.{EventConverter, SimpleEventConverter}
+
+import scala.collection.JavaConverters._
+import com.cgnal.spark.opentsdb.DataPoint
+import com.twitter.bijection.Injection
+import com.twitter.bijection.avro.{GenericAvroCodecs, SpecificAvroCodecs}
 import kafka.serializer.DefaultDecoder
+import org.apache.avro.Schema
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka.KafkaUtils
 import org.slf4j.LoggerFactory
 
-import scala.util.Success
+import scala.reflect._
+import scala.util.{Success, Try}
 
 /**
   * Created by cgnal on 08/09/16.
   */
-class SparkStreamingAvroConsumer {
+class SparkStreamingAvroConsumer[T <: EventConverter: ClassTag](@transient ssc: StreamingContext,
+                                                                topicSet:Set[String],
+                                                                kafkaParams: Map[String, String]
+                                                               ) extends Serializable {
   val logger = LoggerFactory.getLogger(this.getClass)
 
-  def run(implicit ssc: StreamingContext, topicsSet: Set[String], kafkaParams: Map[String, String]): DStream[DataPoint] = {
+  val converter= ssc.sparkContext.broadcast(classTag[T].runtimeClass.newInstance().asInstanceOf[T with Serializable])
+
+  def run(): DStream[DataPoint[Double]] = {
 
     logger.info("Consumer is running")
     assert(kafkaParams.contains("metadata.broker.list"))
 
-    val inputStream: InputDStream[(Array[Byte], Array[Byte])] = KafkaUtils.createDirectStream[Array[Byte], Array[Byte], DefaultDecoder, DefaultDecoder](ssc, kafkaParams, topicsSet)
 
-    val lines: DStream[DataPoint] = inputStream.map { el =>
-      val schema = AvroType[DataPoint]
-      val bis = new ByteArrayInputStream(el._2)
-      val io: AvroTypeIO[DataPoint] = schema.io
-      val Success(dataPoint) = io.read(bis)
-      dataPoint
+    val inputStream: InputDStream[(Array[Byte], Array[Byte])] = KafkaUtils.createDirectStream[Array[Byte], Array[Byte], DefaultDecoder, DefaultDecoder](ssc, kafkaParams, topicSet)
+
+    inputStream.mapPartitions{ rdd =>
+      val specificAvroBinaryInjection: Injection[Event, Array[Byte]]= SpecificAvroCodecs.toBinary[Event]
+      rdd.map{el =>
+        val Success(event) = specificAvroBinaryInjection.invert(el._2)
+        event}
     }
-
-    lines
-
+      .filter(e => converter.value.convert. isDefinedAt(e))
+      .map(converter.value.convert)
   }
-
-  //  def run(ssc: StreamingContext, topicsSet: Set[String], kafkaParams: Map[String, String]):  Unit = {
-  //
-  //    assert(kafkaParams.contains("metadata.broker.list"))
-  //
-  //    val inputStream: InputDStream[(Array[Byte],Array[Byte])] = KafkaUtils.createDirectStream[Array[Byte], Array[Byte], DefaultDecoder, DefaultDecoder](ssc, kafkaParams, topicsSet)
-  //
-  //    val lines: DStream[DataPoint] = inputStream.map{ el =>
-  //      val schema = AvroType[DataPoint]
-  //      val bis = new ByteArrayInputStream(el._2)
-  //      val io: AvroTypeIO[DataPoint] = schema.io
-  //      val Success(dataPoint) = io.read(bis)
-  //      dataPoint
-  //    }
-  //
-  //    lines.print(20)
-  //  }
-
 }
 

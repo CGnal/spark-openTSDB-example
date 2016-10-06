@@ -149,9 +149,9 @@ object Main extends App {
   //echo stat | nc <zookeeper ip> 2181
   //echo mntr | nc <zookeeper ip> 2181
   // echo isro  | nc <zookeeper ip> 2181
-  val kfServer = new KafkaLocal(true)
+  val kfServer = new KafkaLocal(false)
   kfServer.start()
-  val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
+  //val topic = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.topic")
   //kfServer.createTopic(topic)
 
   //Thread.sleep(10000)

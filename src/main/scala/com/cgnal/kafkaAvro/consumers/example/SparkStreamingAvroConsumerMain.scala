@@ -20,11 +20,13 @@ import java.io.File
 import java.util.Properties
 
 import com.cgnal.kafkaAvro.consumers.SparkStreamingAvroConsumer
+import com.cgnal.kafkaAvro.converters.SimpleEventConverter
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import kafka.admin.AdminUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.slf4j.LoggerFactory
+
 
 /**
   * Created by cgnal on 09/09/16.
@@ -35,7 +37,7 @@ object SparkStreamingAvroConsumerMain  {
   def main(args: Array[String]): Unit = {
 
     val sparkConf = new SparkConf().
-      setAppName("spark-opentsdb-local-test").
+      setAppName("spark-opentsdb-local-test")
     //set("spark.io.compression.codec", "lzf")
 
     var config = ConfigFactory.load()
@@ -58,7 +60,7 @@ object SparkStreamingAvroConsumerMain  {
     val brokers = ConfigFactory.load().getString("spark-opentsdb-exmaples.kafka.brokers")
     val props = Map("metadata.broker.list" -> brokers)
 
-    val stream = new SparkStreamingAvroConsumer().run(ssc, Set(topic), props)
+    val stream = new SparkStreamingAvroConsumer[SimpleEventConverter](ssc, Set(topic), props).run()
 
     stream.print(100)
 
