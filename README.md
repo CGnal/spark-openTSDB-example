@@ -19,13 +19,13 @@ Download avro-tools from http://mvnrepository.com/artifact/org.apache.avro/avro-
 
 
 # Cloudera Manager Analysis
-To check the number of messagges in kafka using Claudera Manager:
+To check the number of messagges in kafka using Cloudera Manager:
 
-> ClauderaManager -> Kafka -> Chart Library -> Topics (click on topic to analyze)
+> ClouderaManager -> Kafka -> Chart Library -> Topics (click on topic to analyze)
 
-To check the number of consumed messages in kafka using Claudera Manager:
+To check the number of consumed messages in kafka using Cloudera Manager:
 
-> ClauderaManager -> Yarn -> WebUI -> ResourceManager WebUi -> ApplicationMaster -> Streaming
+> ClouderaManager -> Yarn -> WebUI -> ResourceManager WebUi -> ApplicationMaster -> Streaming
 
 
 # Packaging 
