@@ -29,11 +29,11 @@ To check the number of consumed messages in kafka using Claudera Manager:
 
 
 # Packaging 
-Per generare il jar con tutte le dipendenze nella cartella ./lib
+To generate the jar with all dependencies in the ./lib directory:
 > sbt universal:packageZipTarball
-Il tar si troverà nel path ./spark-opentsdb-examples/target/universal
+The tar will be found in path ./spark-opentsdb-examples/target/universal
 
-Per aggiornare solo il jar senza dipendenze estrne
+To generate package without external dependencies:
 > sbt clean package
 
 
